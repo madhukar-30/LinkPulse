@@ -28,7 +28,14 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(auth -> auth
+
+                        // Authentication endpoints
                         .requestMatchers("/api/auth/**").permitAll()
+
+                        // Public short-link redirect
+                        .requestMatchers("/", "/*").permitAll()
+
+                        // Everything else requires authentication
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(

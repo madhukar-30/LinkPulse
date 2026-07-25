@@ -15,4 +15,6 @@ public interface LinkService {
     LinkResponse updateLink(Long id, UpdateLinkRequest request);
 
     void deleteLink(Long id);
+
+    String resolveOriginalUrl(String shortCode);
 }

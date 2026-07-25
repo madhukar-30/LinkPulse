@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+
 import java.security.SecureRandom;
 import java.util.List;
 
@@ -117,5 +118,22 @@ public class LinkServiceImpl implements LinkService {
                 .clickCount(link.getClickCount())
                 .createdAt(link.getCreatedAt())
                 .build();
+    }
+    @Override
+    @Transactional
+    public String resolveOriginalUrl(String shortCode) {
+
+        Link link = linkRepository.findByShortCode(shortCode)
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Short link not found"
+                        )
+                );
+
+        link.setClickCount(link.getClickCount() + 1);
+
+        // Hibernate dirty checking automatically updates clickCount
+        return link.getOriginalUrl();
     }
 }
