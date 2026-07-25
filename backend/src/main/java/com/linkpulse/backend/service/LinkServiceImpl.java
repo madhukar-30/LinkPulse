@@ -1,10 +1,10 @@
 package com.linkpulse.backend.service;
 
+import com.linkpulse.backend.analytics.UserAgentDetails;
+import com.linkpulse.backend.analytics.UserAgentParser;
 import com.linkpulse.backend.dto.CreateLinkRequest;
 import com.linkpulse.backend.dto.LinkResponse;
 import com.linkpulse.backend.dto.UpdateLinkRequest;
-import com.linkpulse.backend.analytics.UserAgentDetails;
-import com.linkpulse.backend.analytics.UserAgentParser;
 import com.linkpulse.backend.entity.ClickEvent;
 import com.linkpulse.backend.entity.Link;
 import com.linkpulse.backend.entity.User;
@@ -18,7 +18,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-
 
 import java.security.SecureRandom;
 import java.util.List;
@@ -56,7 +55,8 @@ public class LinkServiceImpl implements LinkService {
     public List<LinkResponse> getUserLinks() {
         User currentUser = getCurrentUser();
 
-        return linkRepository.findAllByUserOrderByCreatedAtDesc(currentUser).stream()
+        return linkRepository.findAllByUserOrderByCreatedAtDesc(currentUser)
+                .stream()
                 .map(this::toResponse)
                 .toList();
     }
@@ -65,9 +65,10 @@ public class LinkServiceImpl implements LinkService {
     @Transactional
     public LinkResponse updateLink(Long id, UpdateLinkRequest request) {
         Link link = getUserLink(id, getCurrentUser());
+
         link.setOriginalUrl(request.getOriginalUrl());
 
-        return toResponse(linkRepository.save(link));
+        return toResponse(link);
     }
 
     @Override
@@ -75,6 +76,36 @@ public class LinkServiceImpl implements LinkService {
     public void deleteLink(Long id) {
         Link link = getUserLink(id, getCurrentUser());
         linkRepository.delete(link);
+    }
+
+    @Override
+    @Transactional
+    public String resolveOriginalUrl(String shortCode, HttpServletRequest request) {
+        Link link = linkRepository.findByShortCode(shortCode)
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Short link not found"
+                        )
+                );
+
+        link.setClickCount(link.getClickCount() + 1);
+
+        UserAgentDetails userAgentDetails = userAgentParser.parse(request);
+
+        clickEventRepository.save(
+                ClickEvent.builder()
+                        .link(link)
+                        .ipAddress(extractClientIpAddress(request))
+                        .userAgent(request.getHeader("User-Agent"))
+                        .browser(userAgentDetails.browser())
+                        .operatingSystem(userAgentDetails.operatingSystem())
+                        .deviceType(userAgentDetails.deviceType())
+                        .referrer(request.getHeader("Referer"))
+                        .build()
+        );
+
+        return link.getOriginalUrl();
     }
 
     private User getCurrentUser() {
@@ -89,12 +120,14 @@ public class LinkServiceImpl implements LinkService {
 
     private Link getUserLink(Long id, User user) {
         return linkRepository.findByIdAndUser(id, user)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Link not found"));
+                .orElseThrow(() ->
+                        new ResponseStatusException(HttpStatus.NOT_FOUND, "Link not found"));
     }
 
     private String generateUniqueShortCode() {
         for (int attempt = 0; attempt < MAX_SHORT_CODE_GENERATION_ATTEMPTS; attempt++) {
             String shortCode = generateShortCode();
+
             if (!linkRepository.existsByShortCode(shortCode)) {
                 return shortCode;
             }
@@ -117,6 +150,19 @@ public class LinkServiceImpl implements LinkService {
         return shortCode.toString();
     }
 
+    private String extractClientIpAddress(HttpServletRequest request) {
+        String forwardedFor = request.getHeader("X-Forwarded-For");
+
+        if (forwardedFor != null && !forwardedFor.isBlank()) {
+            return forwardedFor.split(",", 2)[0].trim();
+        }
+
+        String realIp = request.getHeader("X-Real-IP");
+        return realIp != null && !realIp.isBlank()
+                ? realIp
+                : request.getRemoteAddr();
+    }
+
     private LinkResponse toResponse(Link link) {
         return LinkResponse.builder()
                 .id(link.getId())
@@ -125,41 +171,5 @@ public class LinkServiceImpl implements LinkService {
                 .clickCount(link.getClickCount())
                 .createdAt(link.getCreatedAt())
                 .build();
-    }
-    @Override
-    @Transactional
-    public String resolveOriginalUrl(String shortCode, HttpServletRequest request) {
-        Link link = linkRepository.findByShortCode(shortCode)
-                .orElseThrow(() ->
-                        new ResponseStatusException(
-                                HttpStatus.NOT_FOUND,
-                                "Short link not found"
-                        )
-                );
-
-        link.setClickCount(link.getClickCount() + 1);
-        UserAgentDetails userAgentDetails = userAgentParser.parse(request);
-
-        clickEventRepository.save(ClickEvent.builder()
-                .link(link)
-                .ipAddress(extractClientIpAddress(request))
-                .userAgent(request.getHeader("User-Agent"))
-                .browser(userAgentDetails.browser())
-                .operatingSystem(userAgentDetails.operatingSystem())
-                .deviceType(userAgentDetails.deviceType())
-                .referrer(request.getHeader("Referer"))
-                .build());
-
-        return link.getOriginalUrl();
-    }
-
-    private String extractClientIpAddress(HttpServletRequest request) {
-        String forwardedFor = request.getHeader("X-Forwarded-For");
-        if (forwardedFor != null && !forwardedFor.isBlank()) {
-            return forwardedFor.split(",", 2)[0].trim();
-        }
-
-        String realIp = request.getHeader("X-Real-IP");
-        return realIp != null && !realIp.isBlank() ? realIp : request.getRemoteAddr();
     }
 }

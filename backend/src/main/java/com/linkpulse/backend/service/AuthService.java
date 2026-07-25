@@ -6,16 +6,14 @@ import com.linkpulse.backend.dto.RegisterRequest;
 import com.linkpulse.backend.dto.RegisterResponse;
 import com.linkpulse.backend.entity.Role;
 import com.linkpulse.backend.entity.User;
+import com.linkpulse.backend.exception.InvalidCredentialsException;
+import com.linkpulse.backend.exception.UserAlreadyExistsException;
 import com.linkpulse.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import com.linkpulse.backend.exception.InvalidCredentialsException;
-import com.linkpulse.backend.exception.UserAlreadyExistsException;
-
 import java.time.LocalDateTime;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -48,13 +46,8 @@ public class AuthService {
 
     public LoginResponse login(LoginRequest request) {
 
-        Optional<User> userOptional = userRepository.findByEmail(request.getEmail());
-
-        if (userOptional.isEmpty()) {
-            throw new InvalidCredentialsException("Invalid email or password");
-        }
-
-        User user = userOptional.get();
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password"));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new InvalidCredentialsException("Invalid email or password");
