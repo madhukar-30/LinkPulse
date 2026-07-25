@@ -3,6 +3,7 @@ package com.linkpulse.backend.service;
 import com.linkpulse.backend.dto.CreateLinkRequest;
 import com.linkpulse.backend.dto.LinkResponse;
 import com.linkpulse.backend.dto.UpdateLinkRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
 
@@ -16,5 +17,5 @@ public interface LinkService {
 
     void deleteLink(Long id);
 
-    String resolveOriginalUrl(String shortCode);
+    String resolveOriginalUrl(String shortCode, HttpServletRequest request);
 }

@@ -1,12 +1,17 @@
 package com.linkpulse.backend.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 
-
-@Data
+@Getter
 @AllArgsConstructor
+@Schema(description = "Registration result")
 public class RegisterResponse {
 
-    private String message;
+    @Schema(
+            description = "Registration status message",
+            example = "User registered successfully"
+    )
+    private final String message;
 }

@@ -3,9 +3,14 @@ package com.linkpulse.backend.service;
 import com.linkpulse.backend.dto.CreateLinkRequest;
 import com.linkpulse.backend.dto.LinkResponse;
 import com.linkpulse.backend.dto.UpdateLinkRequest;
+import com.linkpulse.backend.analytics.UserAgentDetails;
+import com.linkpulse.backend.analytics.UserAgentParser;
+import com.linkpulse.backend.entity.ClickEvent;
 import com.linkpulse.backend.entity.Link;
 import com.linkpulse.backend.entity.User;
+import com.linkpulse.backend.repository.ClickEventRepository;
 import com.linkpulse.backend.repository.LinkRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -28,7 +33,9 @@ public class LinkServiceImpl implements LinkService {
     private static final int MAX_SHORT_CODE_GENERATION_ATTEMPTS = 20;
 
     private final LinkRepository linkRepository;
-    private final SecureRandom secureRandom = new SecureRandom();
+    private final ClickEventRepository clickEventRepository;
+    private final UserAgentParser userAgentParser;
+    private final SecureRandom secureRandom;
 
     @Override
     @Transactional
@@ -121,8 +128,7 @@ public class LinkServiceImpl implements LinkService {
     }
     @Override
     @Transactional
-    public String resolveOriginalUrl(String shortCode) {
-
+    public String resolveOriginalUrl(String shortCode, HttpServletRequest request) {
         Link link = linkRepository.findByShortCode(shortCode)
                 .orElseThrow(() ->
                         new ResponseStatusException(
@@ -132,8 +138,28 @@ public class LinkServiceImpl implements LinkService {
                 );
 
         link.setClickCount(link.getClickCount() + 1);
+        UserAgentDetails userAgentDetails = userAgentParser.parse(request);
 
-        // Hibernate dirty checking automatically updates clickCount
+        clickEventRepository.save(ClickEvent.builder()
+                .link(link)
+                .ipAddress(extractClientIpAddress(request))
+                .userAgent(request.getHeader("User-Agent"))
+                .browser(userAgentDetails.browser())
+                .operatingSystem(userAgentDetails.operatingSystem())
+                .deviceType(userAgentDetails.deviceType())
+                .referrer(request.getHeader("Referer"))
+                .build());
+
         return link.getOriginalUrl();
+    }
+
+    private String extractClientIpAddress(HttpServletRequest request) {
+        String forwardedFor = request.getHeader("X-Forwarded-For");
+        if (forwardedFor != null && !forwardedFor.isBlank()) {
+            return forwardedFor.split(",", 2)[0].trim();
+        }
+
+        String realIp = request.getHeader("X-Real-IP");
+        return realIp != null && !realIp.isBlank() ? realIp : request.getRemoteAddr();
     }
 }

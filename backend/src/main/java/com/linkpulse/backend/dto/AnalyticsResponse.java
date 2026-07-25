@@ -7,13 +7,14 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Shortened link details")
-public class LinkResponse {
+@Schema(description = "Analytics summary for a shortened link")
+public class AnalyticsResponse {
 
     @Schema(
             description = "Unique identifier of the link",
@@ -33,14 +34,24 @@ public class LinkResponse {
     )
     private String shortCode;
 
+    @Schema(description = "Date and time when the link was created")
+    private LocalDateTime createdAt;
+
     @Schema(
             description = "Total number of recorded clicks",
             example = "42"
     )
-    private Long clickCount;
+    private Long totalClicks;
 
-    @Schema(
-            description = "Date and time when the link was created"
-    )
-    private LocalDateTime createdAt;
+    @Schema(description = "Click counts grouped by day")
+    private List<DailyClickResponse> dailyClicks;
+
+    @Schema(description = "Click counts grouped by browser")
+    private List<BrowserStatResponse> browserStats;
+
+    @Schema(description = "Click counts grouped by operating system")
+    private List<OperatingSystemStatResponse> operatingSystemStats;
+
+    @Schema(description = "Most recent click events")
+    private List<RecentClickResponse> recentClicks;
 }
