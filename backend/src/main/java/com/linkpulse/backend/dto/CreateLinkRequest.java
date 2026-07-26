@@ -9,6 +9,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.validator.constraints.URL;
 
+import java.time.LocalDateTime;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -33,4 +35,12 @@ public class CreateLinkRequest {
             message = "Custom alias must be 3 to 50 characters and contain only letters, numbers, hyphens, or underscores"
     )
     private String customAlias;
+
+    @Schema(
+            description = "Optional expiration date and time. If omitted, the shortened link never expires.",
+            example = "2027-01-01T00:00:00",
+            type = "string",
+            format = "date-time"
+    )
+    private LocalDateTime expiresAt;
 }

@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.security.SecureRandom;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -47,6 +48,7 @@ public class LinkServiceImpl implements LinkService {
         Link link = Link.builder()
                 .originalUrl(request.getOriginalUrl())
                 .shortCode(resolveShortCodeForCreate(request.getCustomAlias()))
+                .expiresAt(validateExpirationDate(request.getExpiresAt()))
                 .user(currentUser)
                 .build();
 
@@ -69,6 +71,9 @@ public class LinkServiceImpl implements LinkService {
         Link link = getUserLink(id, getCurrentUser());
         link.setOriginalUrl(request.getOriginalUrl());
         link.setShortCode(resolveShortCodeForUpdate(link.getShortCode(), request.getCustomAlias()));
+        if (request.getExpiresAt() != null) {
+            link.setExpiresAt(validateExpirationDate(request.getExpiresAt()));
+        }
 
         return toResponse(linkRepository.save(link));
     }
@@ -90,6 +95,10 @@ public class LinkServiceImpl implements LinkService {
                                 "Short link not found"
                         )
                 );
+
+        if (isExpired(link)) {
+            throw new ResponseStatusException(HttpStatus.GONE, "Short link has expired");
+        }
 
         link.setClickCount(link.getClickCount() + 1);
         UserAgentDetails userAgentDetails = userAgentParser.parse(request);
@@ -172,6 +181,21 @@ public class LinkServiceImpl implements LinkService {
         }
     }
 
+    private LocalDateTime validateExpirationDate(LocalDateTime expiresAt) {
+        if (expiresAt != null && expiresAt.isBefore(LocalDateTime.now())) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Expiration date must not be in the past"
+            );
+        }
+
+        return expiresAt;
+    }
+
+    private boolean isExpired(Link link) {
+        return link.getExpiresAt() != null && !link.getExpiresAt().isAfter(LocalDateTime.now());
+    }
+
     private String generateUniqueShortCode() {
         for (int attempt = 0; attempt < MAX_SHORT_CODE_GENERATION_ATTEMPTS; attempt++) {
             String shortCode = generateShortCode();
@@ -214,6 +238,7 @@ public class LinkServiceImpl implements LinkService {
                 .shortCode(link.getShortCode())
                 .clickCount(link.getClickCount())
                 .createdAt(link.getCreatedAt())
+                .expiresAt(link.getExpiresAt())
                 .build();
     }
 }

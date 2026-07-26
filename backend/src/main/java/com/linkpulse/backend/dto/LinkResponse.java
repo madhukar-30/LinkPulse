@@ -44,4 +44,10 @@ public class LinkResponse {
             example = "2026-07-26T15:42:18"
     )
     private LocalDateTime createdAt;
+
+    @Schema(
+            description = "Expiration date and time for the shortened link. Null means the link never expires.",
+            example = "2027-01-01T00:00:00"
+    )
+    private LocalDateTime expiresAt;
 }
