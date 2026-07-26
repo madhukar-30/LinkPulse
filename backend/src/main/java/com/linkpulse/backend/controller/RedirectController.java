@@ -20,7 +20,7 @@ import java.net.URI;
 @RequiredArgsConstructor
 @Tag(
         name = "Redirect",
-        description = "Public URL redirection endpoints."
+        description = "Public endpoints for redirecting shortened URLs to their original destinations."
 )
 public class RedirectController {
 
@@ -29,17 +29,24 @@ public class RedirectController {
     @GetMapping("/{shortCode}")
     @Operation(
             summary = "Redirect to the original URL",
-            description = "Records the click event and redirects the visitor to the original destination URL."
+            description = "Resolves the provided short code, records the click event, and redirects the client to the original destination URL."
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "302", description = "Redirected to the original URL"),
+            @ApiResponse(responseCode = "302", description = "Successfully redirected to the original URL"),
             @ApiResponse(responseCode = "404", description = "Short link not found")
     })
     public ResponseEntity<Void> redirectToOriginalUrl(
-            @Parameter(description = "Generated short code used for public redirection")
+
+            @Parameter(
+                    description = "Unique short code used to identify the shortened URL.",
+                    example = "aB3xYz9"
+            )
             @PathVariable String shortCode,
+
+            @Parameter(hidden = true)
             HttpServletRequest request
     ) {
+
         String originalUrl = linkService.resolveOriginalUrl(shortCode, request);
 
         return ResponseEntity

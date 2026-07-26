@@ -6,11 +6,11 @@ import lombok.Getter;
 
 @Getter
 @AllArgsConstructor
-@Schema(description = "Registration result")
+@Schema(description = "Response payload containing the result of a successful user registration.")
 public class RegisterResponse {
 
     @Schema(
-            description = "Registration status message",
+            description = "Confirmation message indicating that the user was registered successfully.",
             example = "User registered successfully"
     )
     private final String message;

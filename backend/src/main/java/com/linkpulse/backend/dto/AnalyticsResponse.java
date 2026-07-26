@@ -13,45 +13,56 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Analytics summary for a shortened link")
+@Schema(description = "Analytics summary for a shortened link.")
 public class AnalyticsResponse {
 
     @Schema(
-            description = "Unique identifier of the link",
+            description = "Unique identifier of the shortened link.",
             example = "1"
     )
     private Long id;
 
     @Schema(
-            description = "Original destination URL",
+            description = "Original destination URL.",
             example = "https://example.com/articles/linkpulse"
     )
     private String originalUrl;
 
     @Schema(
-            description = "Generated shortened URL code",
+            description = "Unique short code generated for the shortened URL.",
             example = "aB3xYz89"
     )
     private String shortCode;
 
-    @Schema(description = "Date and time when the link was created")
+    @Schema(
+            description = "Date and time when the shortened link was created.",
+            example = "2025-07-20T14:30:15"
+    )
     private LocalDateTime createdAt;
 
     @Schema(
-            description = "Total number of recorded clicks",
+            description = "Total number of recorded clicks.",
             example = "42"
     )
     private Long totalClicks;
 
-    @Schema(description = "Click counts grouped by day")
+    @Schema(
+            description = "Daily click statistics for the shortened link."
+    )
     private List<DailyClickResponse> dailyClicks;
 
-    @Schema(description = "Click counts grouped by browser")
+    @Schema(
+            description = "Click statistics grouped by browser."
+    )
     private List<BrowserStatResponse> browserStats;
 
-    @Schema(description = "Click counts grouped by operating system")
+    @Schema(
+            description = "Click statistics grouped by operating system."
+    )
     private List<OperatingSystemStatResponse> operatingSystemStats;
 
-    @Schema(description = "Most recent click events")
+    @Schema(
+            description = "Most recent click events recorded for the shortened link."
+    )
     private List<RecentClickResponse> recentClicks;
 }

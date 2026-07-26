@@ -7,11 +7,11 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
-@Schema(description = "Authentication request payload")
+@Schema(description = "Request payload for user authentication.")
 public class LoginRequest {
 
     @Schema(
-            description = "User email address",
+            description = "Email address of the user.",
             example = "alex@example.com"
     )
     @Email(message = "Invalid email address")
@@ -19,7 +19,7 @@ public class LoginRequest {
     private String email;
 
     @Schema(
-            description = "User password",
+            description = "Password of the user account.",
             example = "SecurePassword123!"
     )
     @NotBlank(message = "Password is required")

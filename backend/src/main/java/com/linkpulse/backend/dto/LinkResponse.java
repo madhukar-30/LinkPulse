@@ -12,35 +12,36 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Shortened link details")
+@Schema(description = "Response payload containing information about a shortened link.")
 public class LinkResponse {
 
     @Schema(
-            description = "Unique identifier of the link",
+            description = "Unique identifier of the shortened link.",
             example = "1"
     )
     private Long id;
 
     @Schema(
-            description = "Original destination URL",
+            description = "Original destination URL.",
             example = "https://example.com/articles/linkpulse"
     )
     private String originalUrl;
 
     @Schema(
-            description = "Generated shortened URL code",
+            description = "Unique short code generated for the shortened URL.",
             example = "aB3xYz89"
     )
     private String shortCode;
 
     @Schema(
-            description = "Total number of recorded clicks",
+            description = "Total number of recorded clicks.",
             example = "42"
     )
     private Long clickCount;
 
     @Schema(
-            description = "Date and time when the link was created"
+            description = "Date and time when the shortened link was created.",
+            example = "2026-07-26T15:42:18"
     )
     private LocalDateTime createdAt;
 }

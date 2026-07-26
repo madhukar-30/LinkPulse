@@ -12,41 +12,47 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Recorded click event")
+@Schema(description = "Response payload containing information about a recent click event.")
 public class RecentClickResponse {
 
-    @Schema(description = "Date and time when the click occurred")
+    @Schema(
+            description = "Date and time when the click event was recorded.",
+            example = "2026-07-26T15:42:18"
+    )
     private LocalDateTime clickedAt;
 
     @Schema(
-            description = "Visitor IP address",
+            description = "IP address of the visitor.",
             example = "203.0.113.10"
     )
     private String ipAddress;
 
-    @Schema(description = "Raw User-Agent header sent by the visitor")
+    @Schema(
+            description = "Raw User-Agent header sent by the visitor.",
+            example = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/138.0.0.0 Safari/537.36"
+    )
     private String userAgent;
 
     @Schema(
-            description = "Detected browser",
+            description = "Name of the detected web browser.",
             example = "Chrome"
     )
     private String browser;
 
     @Schema(
-            description = "Detected operating system",
+            description = "Name of the detected operating system.",
             example = "Windows"
     )
     private String operatingSystem;
 
     @Schema(
-            description = "Detected device type",
+            description = "Detected device type.",
             example = "Desktop"
     )
     private String deviceType;
 
     @Schema(
-            description = "Referrer URL sent by the visitor",
+            description = "Referrer URL sent by the visitor.",
             example = "https://google.com/"
     )
     private String referrer;

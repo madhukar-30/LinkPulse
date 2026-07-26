@@ -7,11 +7,11 @@ import lombok.Data;
 import org.hibernate.validator.constraints.URL;
 
 @Data
-@Schema(description = "Request to update a shortened link")
+@Schema(description = "Request payload for updating a shortened link.")
 public class UpdateLinkRequest {
 
     @Schema(
-            description = "Updated original destination URL",
+            description = "Updated original URL for the shortened link.",
             example = "https://example.com/updated-destination"
     )
     @NotBlank(message = "Original URL is required")

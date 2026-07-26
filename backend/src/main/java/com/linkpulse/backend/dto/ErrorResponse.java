@@ -12,26 +12,30 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "API error response")
+@Schema(description = "Standard API error response.")
 public class ErrorResponse {
 
-    @Schema(description = "Date and time when the error occurred")
+    @Schema(
+            description = "Date and time when the error occurred.",
+            example = "2026-07-26T15:42:18"
+    )
     private LocalDateTime timestamp;
 
     @Schema(
-            description = "HTTP status code",
+            description = "HTTP status code returned by the API.",
             example = "400"
     )
     private Integer status;
 
     @Schema(
-            description = "Error category",
+            description = "Short description of the error.",
             example = "Validation Failed"
     )
     private String error;
 
     @Schema(
-            description = "Error details or validation messages"
+            description = "Detailed error message or validation errors returned by the API.",
+            example = "Original URL must be a valid URL."
     )
     private Object message;
 }

@@ -6,17 +6,17 @@ import lombok.Getter;
 
 @Getter
 @AllArgsConstructor
-@Schema(description = "Browser click statistic")
+@Schema(description = "Browser statistics for a shortened link.")
 public class BrowserStatResponse {
 
     @Schema(
-            description = "Detected browser",
+            description = "Name of the detected web browser.",
             example = "Chrome"
     )
     private final String browser;
 
     @Schema(
-            description = "Number of clicks from the browser",
+            description = "Total number of clicks recorded from this browser.",
             example = "25"
     )
     private final Long clicks;

@@ -6,6 +6,8 @@ import com.linkpulse.backend.dto.UpdateLinkRequest;
 import com.linkpulse.backend.service.LinkService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,22 +33,32 @@ public class LinkController {
     @PostMapping
     @Operation(
             summary = "Create a shortened URL",
-            description = "Creates a new shortened URL for the authenticated user."
+            description = "Creates a new shortened link for the authenticated user."
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "Shortened link created"),
-            @ApiResponse(responseCode = "400", description = "Invalid original URL"),
+            @ApiResponse(responseCode = "201", description = "Shortened link created successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid request or URL"),
             @ApiResponse(responseCode = "401", description = "Authentication required"),
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
-    public ResponseEntity<LinkResponse> createLink(@Valid @RequestBody CreateLinkRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(linkService.createLink(request));
+    public ResponseEntity<LinkResponse> createLink(
+            @Valid
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "Details of the URL to shorten.",
+                    required = true,
+                    content = @Content(schema = @Schema(implementation = CreateLinkRequest.class))
+            )
+            @RequestBody CreateLinkRequest request
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(linkService.createLink(request));
     }
 
     @GetMapping
     @Operation(
             summary = "Retrieve authenticated user's links",
-            description = "Returns all shortened links belonging to the authenticated user."
+            description = "Returns all shortened links owned by the authenticated user."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Links retrieved successfully"),
@@ -59,27 +71,38 @@ public class LinkController {
 
     @PutMapping("/{id}")
     @Operation(
-            summary = "Update an existing shortened URL",
-            description = "Updates the destination URL of a link owned by the authenticated user."
+            summary = "Update a shortened URL",
+            description = "Updates an existing shortened link owned by the authenticated user."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Link updated successfully"),
-            @ApiResponse(responseCode = "400", description = "Invalid original URL"),
+            @ApiResponse(responseCode = "400", description = "Invalid request or URL"),
             @ApiResponse(responseCode = "401", description = "Authentication required"),
             @ApiResponse(responseCode = "403", description = "Access denied"),
             @ApiResponse(responseCode = "404", description = "Link not found")
     })
     public ResponseEntity<LinkResponse> updateLink(
-            @Parameter(description = "Unique identifier of the shortened link")
+            @Parameter(
+                    description = "Unique identifier of the link.",
+                    example = "1"
+            )
             @PathVariable Long id,
-            @Valid @RequestBody UpdateLinkRequest request) {
+
+            @Valid
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "Updated details for the shortened link.",
+                    required = true,
+                    content = @Content(schema = @Schema(implementation = UpdateLinkRequest.class))
+            )
+            @RequestBody UpdateLinkRequest request
+    ) {
         return ResponseEntity.ok(linkService.updateLink(id, request));
     }
 
     @DeleteMapping("/{id}")
     @Operation(
             summary = "Delete a shortened URL",
-            description = "Deletes a link owned by the authenticated user."
+            description = "Deletes a shortened link owned by the authenticated user."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Link deleted successfully"),
@@ -88,8 +111,12 @@ public class LinkController {
             @ApiResponse(responseCode = "404", description = "Link not found")
     })
     public ResponseEntity<Void> deleteLink(
-            @Parameter(description = "Unique identifier of the shortened link")
-            @PathVariable Long id) {
+            @Parameter(
+                    description = "Unique identifier of the link.",
+                    example = "1"
+            )
+            @PathVariable Long id
+    ) {
         linkService.deleteLink(id);
         return ResponseEntity.noContent().build();
     }

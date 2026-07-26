@@ -11,14 +11,17 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/links")
 @RequiredArgsConstructor
 @Tag(
         name = "Analytics",
-        description = "Analytics and statistics for shortened links."
+        description = "Retrieve analytics and statistics for shortened links."
 )
 public class AnalyticsController {
 
@@ -27,7 +30,7 @@ public class AnalyticsController {
     @GetMapping("/{id}/analytics")
     @Operation(
             summary = "Retrieve analytics for a shortened URL",
-            description = "Returns click totals, daily activity, browser and operating system statistics, and recent click events."
+            description = "Returns detailed analytics for a shortened link, including total clicks, daily click activity, browser statistics, operating system statistics, and recent click events."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Analytics retrieved successfully"),
@@ -36,16 +39,18 @@ public class AnalyticsController {
             @ApiResponse(responseCode = "404", description = "Link not found")
     })
     public ResponseEntity<AnalyticsResponse> getLinkAnalytics(
+
             @Parameter(
-                    description = "Unique identifier of the shortened link",
-                    required = true
+                    description = "Unique identifier of the link.",
+                    example = "1"
             )
             @PathVariable Long id,
+
+            @Parameter(hidden = true)
             @AuthenticationPrincipal User authenticatedUser) {
 
-        AnalyticsResponse response =
-                analyticsService.getLinkAnalytics(id, authenticatedUser);
-
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(
+                analyticsService.getLinkAnalytics(id, authenticatedUser)
+        );
     }
 }

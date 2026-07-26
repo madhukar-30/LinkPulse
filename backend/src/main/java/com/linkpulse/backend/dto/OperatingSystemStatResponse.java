@@ -6,17 +6,17 @@ import lombok.Getter;
 
 @Getter
 @AllArgsConstructor
-@Schema(description = "Operating system click statistic")
+@Schema(description = "Operating system statistics for a shortened link.")
 public class OperatingSystemStatResponse {
 
     @Schema(
-            description = "Detected operating system",
+            description = "Name of the detected operating system.",
             example = "Windows"
     )
     private final String operatingSystem;
 
     @Schema(
-            description = "Number of clicks from the operating system",
+            description = "Total number of clicks recorded from this operating system.",
             example = "20"
     )
     private final Long clicks;

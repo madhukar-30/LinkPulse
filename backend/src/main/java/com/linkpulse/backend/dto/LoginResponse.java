@@ -6,11 +6,11 @@ import lombok.Getter;
 
 @Getter
 @AllArgsConstructor
-@Schema(description = "Successful authentication response")
+@Schema(description = "Response payload containing authentication details.")
 public class LoginResponse {
 
     @Schema(
-            description = "JWT access token",
+            description = "JWT access token used to authenticate subsequent requests.",
             example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
     )
     private final String accessToken;
