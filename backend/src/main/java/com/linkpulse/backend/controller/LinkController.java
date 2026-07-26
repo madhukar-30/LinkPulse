@@ -18,7 +18,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import org.springframework.data.domain.Page;
 
 @RestController
 @RequestMapping("/api/links")
@@ -59,15 +59,24 @@ public class LinkController {
     @GetMapping
     @Operation(
             summary = "Retrieve authenticated user's links",
-            description = "Returns all shortened links owned by the authenticated user."
+            description = "Returns a paginated list of shortened links owned by the authenticated user. Results can be searched and sorted."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Links retrieved successfully"),
             @ApiResponse(responseCode = "401", description = "Authentication required"),
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
-    public ResponseEntity<List<LinkResponse>> getUserLinks() {
-        return ResponseEntity.ok(linkService.getUserLinks());
+    public ResponseEntity<Page<LinkResponse>> getUserLinks(
+            @Parameter(description = "Zero-based page number.", example = "0")
+            @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Number of links per page.", example = "10")
+            @RequestParam(defaultValue = "10") int size,
+            @Parameter(description = "Optional case-insensitive search value for the original URL or short code.", example = "github")
+            @RequestParam(required = false) String search,
+            @Parameter(description = "Sort field and direction. Supported fields: createdAt, clickCount.", example = "createdAt,desc")
+            @RequestParam(defaultValue = "createdAt,desc") String sort
+    ) {
+        return ResponseEntity.ok(linkService.getUserLinks(page, size, search, sort));
     }
 
     @PutMapping("/{id}")

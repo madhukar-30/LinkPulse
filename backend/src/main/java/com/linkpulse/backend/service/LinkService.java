@@ -4,14 +4,14 @@ import com.linkpulse.backend.dto.CreateLinkRequest;
 import com.linkpulse.backend.dto.LinkResponse;
 import com.linkpulse.backend.dto.UpdateLinkRequest;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.data.domain.Page;
 
-import java.util.List;
 
 public interface LinkService {
 
     LinkResponse createLink(CreateLinkRequest request);
 
-    List<LinkResponse> getUserLinks();
+    Page<LinkResponse> getUserLinks(int page, int size, String search, String sort);
 
     LinkResponse updateLink(Long id, UpdateLinkRequest request);
 

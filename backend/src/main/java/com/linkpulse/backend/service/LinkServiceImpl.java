@@ -18,6 +18,10 @@ import com.google.zxing.common.BitMatrix;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -31,7 +35,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.security.SecureRandom;
-import java.util.List;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 @Service
@@ -45,6 +49,7 @@ public class LinkServiceImpl implements LinkService {
     private static final int QR_CODE_SIZE = 300;
     private static final Pattern CUSTOM_ALIAS_PATTERN =
             Pattern.compile("^[A-Za-z0-9_-]{3,50}$");
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("createdAt", "clickCount");
 
     private final LinkRepository linkRepository;
     private final ClickEventRepository clickEventRepository;
@@ -71,12 +76,13 @@ public class LinkServiceImpl implements LinkService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<LinkResponse> getUserLinks() {
+    public Page<LinkResponse> getUserLinks(int page, int size, String search, String sort) {
         User currentUser = getCurrentUser();
+        validatePageRequest(page, size);
+        Pageable pageable = PageRequest.of(page, size, createSort(sort));
 
-        return linkRepository.findAllByUserOrderByCreatedAtDesc(currentUser).stream()
-                .map(this::toResponse)
-                .toList();
+        return linkRepository.findByUserWithSearch(currentUser, normalizeSearch(search), pageable)
+                .map(this::toResponse);
     }
 
     @Override
@@ -210,6 +216,48 @@ public class LinkServiceImpl implements LinkService {
 
         String normalizedAlias = customAlias.trim();
         return normalizedAlias.isEmpty() ? null : normalizedAlias;
+    }
+
+    private String normalizeSearch(String search) {
+        if (search == null) {
+            return null;
+        }
+
+        String normalizedSearch = search.trim();
+        return normalizedSearch.isEmpty() ? null : normalizedSearch;
+    }
+
+    private void validatePageRequest(int page, int size) {
+        if (page < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Page must not be negative");
+        }
+        if (size <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Size must be greater than zero");
+        }
+    }
+
+    private Sort createSort(String sort) {
+        String sortValue = sort == null || sort.isBlank() ? "createdAt,desc" : sort.trim();
+        String[] sortParts = sortValue.split(",", -1);
+        String property = sortParts[0].trim();
+
+        if (sortParts.length > 2 || !ALLOWED_SORT_FIELDS.contains(property)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Sort must use createdAt or clickCount"
+            );
+        }
+
+        Sort.Direction direction = Sort.Direction.DESC;
+        if (sortParts.length == 2) {
+            direction = Sort.Direction.fromOptionalString(sortParts[1].trim())
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.BAD_REQUEST,
+                            "Sort direction must be asc or desc"
+                    ));
+        }
+
+        return Sort.by(direction, property);
     }
 
     private void validateCustomAlias(String customAlias) {
