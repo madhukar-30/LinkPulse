@@ -17,5 +17,7 @@ public interface LinkService {
 
     void deleteLink(Long id);
 
+    byte[] generateQrCode(Long id);
+
     String resolveOriginalUrl(String shortCode, HttpServletRequest request);
 }

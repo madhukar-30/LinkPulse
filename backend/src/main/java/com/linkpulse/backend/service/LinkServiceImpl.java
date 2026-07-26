@@ -10,8 +10,14 @@ import com.linkpulse.backend.entity.Link;
 import com.linkpulse.backend.entity.User;
 import com.linkpulse.backend.repository.ClickEventRepository;
 import com.linkpulse.backend.repository.LinkRepository;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.MultiFormatWriter;
+import com.google.zxing.WriterException;
+import com.google.zxing.client.j2se.MatrixToImageWriter;
+import com.google.zxing.common.BitMatrix;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -19,6 +25,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.security.SecureRandom;
 import java.util.List;
@@ -32,6 +42,7 @@ public class LinkServiceImpl implements LinkService {
             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     private static final int SHORT_CODE_LENGTH = 8;
     private static final int MAX_SHORT_CODE_GENERATION_ATTEMPTS = 20;
+    private static final int QR_CODE_SIZE = 300;
     private static final Pattern CUSTOM_ALIAS_PATTERN =
             Pattern.compile("^[A-Za-z0-9_-]{3,50}$");
 
@@ -39,6 +50,9 @@ public class LinkServiceImpl implements LinkService {
     private final ClickEventRepository clickEventRepository;
     private final UserAgentParser userAgentParser;
     private final SecureRandom secureRandom;
+
+    @Value("${app.base-url}")
+    private String baseUrl;
 
     @Override
     @Transactional
@@ -83,6 +97,32 @@ public class LinkServiceImpl implements LinkService {
     public void deleteLink(Long id) {
         Link link = getUserLink(id, getCurrentUser());
         linkRepository.delete(link);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public byte[] generateQrCode(Long id) {
+        Link link = getUserLink(id, getCurrentUser());
+
+        try {
+            BitMatrix bitMatrix = new MultiFormatWriter().encode(
+                    buildPublicShortUrl(link.getShortCode()),
+                    BarcodeFormat.QR_CODE,
+                    QR_CODE_SIZE,
+                    QR_CODE_SIZE
+            );
+            BufferedImage qrCodeImage = MatrixToImageWriter.toBufferedImage(bitMatrix);
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            ImageIO.write(qrCodeImage, "PNG", outputStream);
+
+            return outputStream.toByteArray();
+        } catch (WriterException | IOException exception) {
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Unable to generate QR code",
+                    exception
+            );
+        }
     }
 
     @Override
@@ -229,6 +269,10 @@ public class LinkServiceImpl implements LinkService {
 
         String realIp = request.getHeader("X-Real-IP");
         return realIp != null && !realIp.isBlank() ? realIp : request.getRemoteAddr();
+    }
+
+    private String buildPublicShortUrl(String shortCode) {
+        return baseUrl.endsWith("/") ? baseUrl + shortCode : baseUrl + "/" + shortCode;
     }
 
     private LinkResponse toResponse(Link link) {

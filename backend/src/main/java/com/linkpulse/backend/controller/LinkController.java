@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -119,5 +120,32 @@ public class LinkController {
     ) {
         linkService.deleteLink(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping(value = "/{id}/qr", produces = MediaType.IMAGE_PNG_VALUE)
+    @Operation(
+            summary = "Generate a QR code for a shortened URL",
+            description = "Generates a PNG QR code containing the public shortened URL for a link owned by the authenticated user."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "QR code generated successfully",
+                    content = @Content(mediaType = MediaType.IMAGE_PNG_VALUE)
+            ),
+            @ApiResponse(responseCode = "401", description = "Authentication required"),
+            @ApiResponse(responseCode = "403", description = "Access denied"),
+            @ApiResponse(responseCode = "404", description = "Link not found")
+    })
+    public ResponseEntity<byte[]> generateQrCode(
+            @Parameter(
+                    description = "Unique identifier of the link.",
+                    example = "1"
+            )
+            @PathVariable Long id
+    ) {
+        return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_PNG)
+                .body(linkService.generateQrCode(id));
     }
 }
