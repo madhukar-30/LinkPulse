@@ -21,6 +21,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.security.SecureRandom;
 import java.util.List;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +31,8 @@ public class LinkServiceImpl implements LinkService {
             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     private static final int SHORT_CODE_LENGTH = 8;
     private static final int MAX_SHORT_CODE_GENERATION_ATTEMPTS = 20;
+    private static final Pattern CUSTOM_ALIAS_PATTERN =
+            Pattern.compile("^[A-Za-z0-9_-]{3,50}$");
 
     private final LinkRepository linkRepository;
     private final ClickEventRepository clickEventRepository;
@@ -43,7 +46,7 @@ public class LinkServiceImpl implements LinkService {
 
         Link link = Link.builder()
                 .originalUrl(request.getOriginalUrl())
-                .shortCode(generateUniqueShortCode())
+                .shortCode(resolveShortCodeForCreate(request.getCustomAlias()))
                 .user(currentUser)
                 .build();
 
@@ -55,8 +58,7 @@ public class LinkServiceImpl implements LinkService {
     public List<LinkResponse> getUserLinks() {
         User currentUser = getCurrentUser();
 
-        return linkRepository.findAllByUserOrderByCreatedAtDesc(currentUser)
-                .stream()
+        return linkRepository.findAllByUserOrderByCreatedAtDesc(currentUser).stream()
                 .map(this::toResponse)
                 .toList();
     }
@@ -65,10 +67,10 @@ public class LinkServiceImpl implements LinkService {
     @Transactional
     public LinkResponse updateLink(Long id, UpdateLinkRequest request) {
         Link link = getUserLink(id, getCurrentUser());
-
         link.setOriginalUrl(request.getOriginalUrl());
+        link.setShortCode(resolveShortCodeForUpdate(link.getShortCode(), request.getCustomAlias()));
 
-        return toResponse(link);
+        return toResponse(linkRepository.save(link));
     }
 
     @Override
@@ -90,20 +92,17 @@ public class LinkServiceImpl implements LinkService {
                 );
 
         link.setClickCount(link.getClickCount() + 1);
-
         UserAgentDetails userAgentDetails = userAgentParser.parse(request);
 
-        clickEventRepository.save(
-                ClickEvent.builder()
-                        .link(link)
-                        .ipAddress(extractClientIpAddress(request))
-                        .userAgent(request.getHeader("User-Agent"))
-                        .browser(userAgentDetails.browser())
-                        .operatingSystem(userAgentDetails.operatingSystem())
-                        .deviceType(userAgentDetails.deviceType())
-                        .referrer(request.getHeader("Referer"))
-                        .build()
-        );
+        clickEventRepository.save(ClickEvent.builder()
+                .link(link)
+                .ipAddress(extractClientIpAddress(request))
+                .userAgent(request.getHeader("User-Agent"))
+                .browser(userAgentDetails.browser())
+                .operatingSystem(userAgentDetails.operatingSystem())
+                .deviceType(userAgentDetails.deviceType())
+                .referrer(request.getHeader("Referer"))
+                .build());
 
         return link.getOriginalUrl();
     }
@@ -120,14 +119,62 @@ public class LinkServiceImpl implements LinkService {
 
     private Link getUserLink(Long id, User user) {
         return linkRepository.findByIdAndUser(id, user)
-                .orElseThrow(() ->
-                        new ResponseStatusException(HttpStatus.NOT_FOUND, "Link not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Link not found"));
+    }
+
+    private String resolveShortCodeForCreate(String customAlias) {
+        String normalizedAlias = normalizeAlias(customAlias);
+
+        if (normalizedAlias == null) {
+            return generateUniqueShortCode();
+        }
+
+        validateCustomAlias(normalizedAlias);
+
+        if (linkRepository.existsByShortCode(normalizedAlias)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Custom alias is already in use");
+        }
+
+        return normalizedAlias;
+    }
+
+    private String resolveShortCodeForUpdate(String currentShortCode, String customAlias) {
+        String normalizedAlias = normalizeAlias(customAlias);
+
+        if (normalizedAlias == null || normalizedAlias.equals(currentShortCode)) {
+            return currentShortCode;
+        }
+
+        validateCustomAlias(normalizedAlias);
+
+        if (linkRepository.existsByShortCode(normalizedAlias)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Custom alias is already in use");
+        }
+
+        return normalizedAlias;
+    }
+
+    private String normalizeAlias(String customAlias) {
+        if (customAlias == null) {
+            return null;
+        }
+
+        String normalizedAlias = customAlias.trim();
+        return normalizedAlias.isEmpty() ? null : normalizedAlias;
+    }
+
+    private void validateCustomAlias(String customAlias) {
+        if (!CUSTOM_ALIAS_PATTERN.matcher(customAlias).matches()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Custom alias must be 3 to 50 characters and contain only letters, numbers, hyphens, or underscores"
+            );
+        }
     }
 
     private String generateUniqueShortCode() {
         for (int attempt = 0; attempt < MAX_SHORT_CODE_GENERATION_ATTEMPTS; attempt++) {
             String shortCode = generateShortCode();
-
             if (!linkRepository.existsByShortCode(shortCode)) {
                 return shortCode;
             }
@@ -152,15 +199,12 @@ public class LinkServiceImpl implements LinkService {
 
     private String extractClientIpAddress(HttpServletRequest request) {
         String forwardedFor = request.getHeader("X-Forwarded-For");
-
         if (forwardedFor != null && !forwardedFor.isBlank()) {
             return forwardedFor.split(",", 2)[0].trim();
         }
 
         String realIp = request.getHeader("X-Real-IP");
-        return realIp != null && !realIp.isBlank()
-                ? realIp
-                : request.getRemoteAddr();
+        return realIp != null && !realIp.isBlank() ? realIp : request.getRemoteAddr();
     }
 
     private LinkResponse toResponse(Link link) {
