@@ -1,0 +1,11 @@
+target/
+.git/
+.idea/
+.mvn/
+*.iml
+*.log
+logs/
+*.jar
+*.war
+*.class
+HELP.md
