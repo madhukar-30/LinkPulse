@@ -60,6 +60,36 @@ LinkPulse is a robust REST API backend for a URL shortening platform, built on *
 
 ---
 
+## 🏗️ Architecture
+
+LinkPulse follows a classic **layered architecture**, keeping each concern isolated and testable:
+
+```
+Client
+  │
+  ▼
+Controller Layer   →  REST endpoints, request/response DTOs, input validation
+  │
+  ▼
+Service Layer      →  Business logic (link creation, analytics aggregation, auth)
+  │
+  ▼
+Repository Layer   →  Spring Data JPA interfaces for data access
+  │
+  ▼
+Database           →  MySQL, managed via Hibernate ORM
+```
+
+- **Controller layer** — exposes the REST API (`AuthController`, `LinkController`, `AnalyticsController`, `RedirectController`) and delegates all logic downstream.
+- **Service layer** — contains the core business rules, including link generation, ownership checks, and analytics aggregation.
+- **Repository layer** — Spring Data JPA repositories provide clean, declarative data access without hand-written SQL.
+- **Security layer** — a custom `JwtAuthenticationFilter` sits in front of the filter chain, validating JWTs on every request before it reaches a controller. Spring Security enforces stateless, session-free authorization based on the resolved user.
+- **Persistence** — Hibernate maps entities (`User`, `Link`, `ClickEvent`, `Role`) to MySQL tables and handles schema management.
+
+This separation keeps the codebase easy to navigate, test, and extend — each layer only knows about the one directly below it.
+
+---
+
 ## 📁 Project Structure
 
 ```
@@ -106,6 +136,23 @@ http://localhost:8080/swagger-ui/index.html
 
 ---
 
+## ⚙️ Environment Variables
+
+LinkPulse is configured entirely through environment variables, with sensible local defaults defined in `application.properties`.
+
+| Variable | Description | Default (local) |
+|---|---|---|
+| `DB_URL` | JDBC connection string for MySQL | `jdbc:mysql://localhost:3306/linkpulse` |
+| `DB_USERNAME` | Database username | `root` |
+| `DB_PASSWORD` | Database password | `password` |
+| `JWT_SECRET` | Secret key used to sign and verify JWTs (32+ characters) | *required, no default* |
+| `JWT_EXPIRATION` | JWT token lifetime, in milliseconds | `3600000` (1 hour) |
+| `APP_BASE_URL` | Public base URL used when building short links and QR codes | *required, no default* |
+
+> ⚠️ `JWT_SECRET` and `APP_BASE_URL` have no defaults in Docker Compose and **must** be set before starting the stack — see the [Docker](#docker) section below.
+
+---
+
 ## 🚀 Running Locally
 
 ### Prerequisites
@@ -128,7 +175,20 @@ The API will be available at `http://localhost:8080`.
 
 ---
 
+## 🔒 Security
+
+LinkPulse is built with security as a first-class concern, not an afterthought:
+
+- **JWT Authentication** — every protected endpoint requires a valid, signed JWT, verified on each request by a custom `JwtAuthenticationFilter`.
+- **Spring Security** — enforces a stateless filter chain (no server-side sessions), with Swagger and public redirect routes explicitly whitelisted and everything else locked down by default.
+- **BCrypt Password Hashing** — user passwords are never stored in plain text; `BCryptPasswordEncoder` hashes them before persistence.
+- **Ownership Validation** — link mutations (update, delete, view analytics) are scoped to the authenticated user, preventing one user from accessing or modifying another user's links.
+
+---
+
 ## Docker
+
+The project ships with a multi-stage `Dockerfile` and a `docker-compose.yml` that provisions both the backend and a MySQL instance.
 
 Set the required runtime values before starting the stack:
 
@@ -137,13 +197,17 @@ $env:JWT_SECRET = "replace-with-a-secure-secret-of-at-least-32-characters"
 $env:APP_BASE_URL = "https://links.example.com"
 ```
 
-Build the backend image:
+### Build manually
+
+Use this if you just want to build the backend image on its own — for example, to inspect it, push it to a registry, or run it against a database you're managing separately.
 
 ```bash
 docker build -t linkpulse-backend .
 ```
 
-Start the backend and MySQL:
+### Run with Docker Compose
+
+Use this for local development or a quick full-stack spin-up — it builds the backend image, starts a MySQL container with a healthcheck, and wires them together automatically.
 
 ```bash
 docker compose up --build -d
