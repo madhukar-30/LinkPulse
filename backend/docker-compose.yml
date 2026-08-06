@@ -1,37 +1,4 @@
 services:
-  mysql:
-    image: mysql:8.4
-    container_name: linkpulse-mysql
-    restart: unless-stopped
-
-    environment:
-      MYSQL_DATABASE: linkpulse
-      MYSQL_USER: ${MYSQL_USERNAME:-linkpulse}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-linkpulse}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
-
-    ports:
-      - "3307:3306"
-
-    volumes:
-      - mysql-data:/var/lib/mysql
-
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "mysqladmin",
-          "ping",
-          "-h",
-          "localhost",
-          "-uroot",
-          "-p${MYSQL_ROOT_PASSWORD:-root}"
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
-
   backend:
     build:
       context: .
@@ -40,20 +7,14 @@ services:
     container_name: linkpulse-backend
     restart: unless-stopped
 
-    depends_on:
-      mysql:
-        condition: service_healthy
-
     environment:
-      DB_URL: jdbc:mysql://mysql:3306/linkpulse?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-      DB_USERNAME: ${MYSQL_USERNAME:-linkpulse}
-      DB_PASSWORD: ${MYSQL_PASSWORD:-linkpulse}
-      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET before starting Docker Compose}
+      DB_URL: ${DB_URL}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+
+      JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-3600000}
-      APP_BASE_URL: ${APP_BASE_URL:?Set APP_BASE_URL before starting Docker Compose}
+      APP_BASE_URL: ${APP_BASE_URL}
 
     ports:
       - "8080:8080"
-
-volumes:
-  mysql-data:
