@@ -20,7 +20,7 @@ public interface LinkRepository extends JpaRepository<Link, Long> {
             select l from Link l
             where l.user = :user
               and (
-                    :search is null
+                    :search = ''
                     or lower(l.originalUrl) like lower(concat('%', :search, '%'))
                     or lower(l.shortCode) like lower(concat('%', :search, '%'))
               )

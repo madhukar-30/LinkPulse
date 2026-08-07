@@ -219,12 +219,16 @@ public class LinkServiceImpl implements LinkService {
     }
 
     private String normalizeSearch(String search) {
+        // Always returns a non-null string ("" means "no filter"). The repository
+        // query compares against '' rather than doing a null check, because a bind
+        // parameter whose only usage is "IS NULL" can't be type-inferred by
+        // PostgreSQL's JDBC driver and throws a 500 ("could not determine data
+        // type of parameter").
         if (search == null) {
-            return null;
+            return "";
         }
 
-        String normalizedSearch = search.trim();
-        return normalizedSearch.isEmpty() ? null : normalizedSearch;
+        return search.trim();
     }
 
     private void validatePageRequest(int page, int size) {
